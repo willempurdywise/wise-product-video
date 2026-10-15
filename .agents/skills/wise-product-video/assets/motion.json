@@ -1,0 +1,88 @@
+{
+  "source": {
+    "repository": "https://github.com/transferwise/base-surfaces",
+    "commit": "887cb8bb7d493e0846f9bdef440b22a540992df7",
+    "file": "base-surfaces-mobile/mobile/src/styles.css",
+    "sha256": "9f61e6823f268af028f5c92ea34d6867358b3409f0911bb36dae411900c152c3"
+  },
+  "page": {
+    "duration": 0.42,
+    "bezier": [
+      0.32,
+      0.72,
+      0.0,
+      1.0
+    ],
+    "parallax": 0.3,
+    "old_opacity": 0.5,
+    "new_opacity": 0.85,
+    "opacity_duration": 0.2,
+    "radius": 12.0
+  },
+  "sheet": {
+    "duration": 0.42,
+    "delay": 0.04,
+    "points": [
+      [
+        0,
+        0.0
+      ],
+      [
+        0.08,
+        0.22
+      ],
+      [
+        0.18,
+        0.58
+      ],
+      [
+        0.26,
+        0.82
+      ],
+      [
+        0.32,
+        0.94
+      ],
+      [
+        0.38,
+        1.02
+      ],
+      [
+        0.42,
+        1.06
+      ],
+      [
+        0.46,
+        1.065
+      ],
+      [
+        0.5,
+        1.045
+      ],
+      [
+        0.56,
+        1.015
+      ],
+      [
+        0.64,
+        0.998
+      ],
+      [
+        0.74,
+        0.995
+      ],
+      [
+        0.86,
+        1.0
+      ],
+      [
+        1.0,
+        1.0
+      ]
+    ],
+    "extra_travel": 40.0,
+    "radius": 32.0,
+    "dim": 0.4,
+    "dim_duration": 0.3
+  }
+}

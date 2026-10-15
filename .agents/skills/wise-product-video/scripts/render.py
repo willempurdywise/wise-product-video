@@ -9,25 +9,30 @@ import subprocess
 
 import imageio_ffmpeg
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageSequence
+from PIL import Image, ImageDraw, ImageFilter, ImageSequence, ImageOps
 
 ASSETS = Path(__file__).resolve().parents[1] / 'assets'
 RESAMPLE = Image.Resampling.LANCZOS
 
 
-def motion(x):
+FORMATS = {"1:1": (1080,1080), "16:9": (1920,1080), "9:16": (1080,1920)}
+PAIRS = [("Bright Green", "#9FE870", "Forest Green", "#163300"), ("Bright Blue", "#A0E1E1", "Dark Charcoal", "#21231D"), ("Bright Yellow", "#FFEB69", "Dark Gold", "#3A341C"), ("Bright Orange", "#FFC091", "Dark Purple", "#260A2F"), ("Bright Pink", "#FFD7EF", "Dark Maroon", "#320707")]
+COLORS = {name.lower(): color for a,b,c,d in PAIRS for name,color in ((a,b),(c,d))}
+PARTNERS = {a:b for _,b,_,d in PAIRS for a,b in ((b,d),(d,b))}
+
+def motion(x, curve=(.32,.72,0,1)):
     x = max(0, min(1, x))
     if x in (0, 1):
         return x
     lo, hi = 0., 1.
     for _ in range(18):
         u = (lo + hi) / 2
-        if 3 * (1-u)**2 * u * .32 + u**3 < x:
+        if 3 * (1-u)**2 * u * curve[0] + 3*(1-u)*u*u*curve[2] + u**3 < x:
             lo = u
         else:
             hi = u
     u = (lo + hi) / 2
-    return 3*(1-u)**2*u*.72 + 3*(1-u)*u*u + u**3
+    return 3*(1-u)**2*u*curve[1] + 3*(1-u)*u*u*curve[3] + u**3
 
 
 def rounded(size, radius, top_only=False):
@@ -41,23 +46,39 @@ def rounded(size, radius, top_only=False):
 
 
 class Movie:
-    def __init__(self, config):
+    def __init__(self, config, overrides=None):
         self.root = config.parent
         self.cfg = json.loads(config.read_text())
         c = self.cfg
-        self.size = tuple(c.get('canvas', [1080, 1080]))
+        c.update(overrides or {})
+        if c.get('base_surfaces'):
+            from sync_motion import extract
+            self.motion = extract(self.path(c['base_surfaces']))
+        else:
+            self.motion = json.loads((self.path(c['motion_profile']) if c.get('motion_profile') else ASSETS/'motion.json').read_text())
+        self.size = FORMATS[c['format']] if 'format' in c else tuple(c.get('canvas', [1080, 1080]))
         self.fps = c.get('fps', 60)
-        self.x, self.y, self.w, self.h = c.get('phone', [345, 118, 390, 844])
+        self.x, self.y, self.w, self.h = c.get('phone', [(self.size[0]-390)//2, (self.size[1]-844)//2, 390, 844])
         if self.fps <= 0 or min(*self.size, self.w, self.h) <= 0 or any(v % 2 for v in self.size):
             raise ValueError('Use positive dimensions/fps and even canvas dimensions for H.264.')
         self.mask = rounded((self.w, self.h), c.get('radius', 40))
-        self.base = Image.new('RGB', self.size, c.get('background', '#9FE870'))
+        background = c.get('background', '#9FE870')
+        background = COLORS.get(background.lower(), background).upper()
+        self.base = Image.new('RGB', self.size, background)
         if c.get('background_image'):
-            self.base = Image.open(self.path(c['background_image'])).convert('RGB').resize(self.size, RESAMPLE)
+            self.base = ImageOps.fit(ImageOps.exif_transpose(Image.open(self.path(c['background_image']))).convert('RGB'), self.size, method=RESAMPLE, centering=tuple(c.get('background_position', [.5,.5])))
         self.logo = None
-        if c.get('logo', '@wise-logo.png'):
-            self.logo = Image.open(self.path(c.get('logo', '@wise-logo.png'))).convert('RGBA')
+        if c.get('logo', True):
+            self.logo = Image.open(self.path(c['logo'] if isinstance(c.get('logo'), str) else '@wise-logo.png')).convert('RGBA')
+            if c.get('background_image'):
+                center = np.array(self.base.crop((self.size[0]//2-120,self.size[1]//2-115,self.size[0]//2+120,self.size[1]//2+115)))
+                color = c.get('logo_color', '#163300' if center.mean() > 128 else '#9FE870')
+            else:
+                color = PARTNERS.get(background, c.get('logo_color', '#163300'))
             self.logo.thumbnail(tuple(c.get('logo_size', [240, 230])), RESAMPLE)
+            tinted = Image.new('RGBA', self.logo.size, color)
+            tinted.putalpha(self.logo.getchannel('A'))
+            self.logo = tinted
         self.screens = {}
         for name, spec in c['screens'].items():
             im = Image.open(self.path(spec['file'])).convert('RGB')
@@ -83,9 +104,10 @@ class Movie:
                 raise ValueError('Unknown screen: ' + scene['screen'])
             trans = scene.get('transition', {})
             kind = trans.get('type', 'cut')
-            if kind not in ('cut', 'push', 'rise', 'fade', 'modal-in', 'modal-out'):
+            if kind not in ('cut', 'push', 'pop', 'rise', 'fade', 'modal-in', 'modal-out'):
                 raise ValueError('Unknown transition: ' + kind)
-            duration = trans.get('duration', .52) if i and kind != 'cut' else 0
+            default_duration = self.motion['sheet']['duration']+self.motion['sheet']['delay'] if kind.startswith('modal-') else self.motion['page']['duration']
+            duration = trans.get('duration', default_duration) if i and kind != 'cut' else 0
             hold = scene.get('hold', 2.)
             if duration < 0 or hold <= 0:
                 raise ValueError('Transition duration must be nonnegative; hold must be positive.')
@@ -170,27 +192,43 @@ class Movie:
         if not duration or local >= duration:
             return new
         old = self.scene_image(i-1, self.lengths[i-1]+local)
-        p = motion(local/duration)
+        p = motion(local/duration, self.motion['page']['bezier'])
         trans = scene['transition']
         kind = trans['type']
         if kind == 'fade':
             return Image.blend(old, new, p)
-        if kind in ('push', 'rise'):
-            result = old.copy()
-            if kind == 'push':
-                result.paste(old, (-round(self.w*.28*p), 0))
-                result.paste(new, (round(self.w*(1-p)), 0))
-            else:
+        if kind in ('push', 'pop', 'rise'):
+            if kind == 'rise':
+                result = old.copy()
                 result.paste(new, (0, round(self.h*(1-p))))
+                return result
+            page = self.motion['page']
+            result = Image.new('RGB', old.size, 'white')
+            def layer(im, x, opacity, radius=0):
+                mask = rounded(im.size, radius) if radius else Image.new('L', im.size, 255)
+                result.paste(im, (round(x),0), mask.point(lambda v: round(v*opacity)))
+            if kind == 'push':
+                layer(old, -self.w*page['parallax']*p, 1-(1-page['old_opacity'])*p)
+                alpha = motion(local/(page['opacity_duration']*duration/page['duration']), (0,0,.58,1))
+                layer(new, self.w*(1-p), page['new_opacity']+(1-page['new_opacity'])*alpha, page['radius']*(1-p))
+            else:
+                layer(new, -self.w*page['parallax']*(1-p), page['old_opacity']+(1-page['old_opacity'])*p)
+                layer(old, self.w*p, 1-(1-page['new_opacity'])*p, page['radius']*p)
             return result
         # The screenshot's dimmed status bar stays out of the moving sheet crop.
         entering = kind == 'modal-in'
-        visibility = p if entering else 1-p
+        sheet_motion = self.motion['sheet']
+        scale = duration/(sheet_motion['duration']+sheet_motion['delay'])
+        progress = max(0, min(1, (local-sheet_motion['delay']*scale)/(sheet_motion['duration']*scale)))
+        spring = float(np.interp(progress, *zip(*sheet_motion['points'])))
+        visibility = spring if entering else 1-spring
+        dim_progress = motion(local/(sheet_motion['dim_duration']*scale), (.25,.1,.25,1))
+        dim_visibility = dim_progress if entering else 1-dim_progress
         under, sheet = (old, new) if entering else (new, old)
-        result = Image.blend(under, Image.new('RGB', under.size, 'black'), trans.get('dim', .25)*visibility)
+        result = Image.blend(under, Image.new('RGB', under.size, 'black'), trans.get('dim', sheet_motion['dim'])*dim_visibility)
         top = trans.get('top', 54)
         tile = sheet.crop((0, top, self.w, self.h))
-        result.paste(tile, (0, top+round((self.h-top)*(1-visibility))), rounded(tile.size, trans.get('radius', 32), True))
+        result.paste(tile, (0, top+round((self.h-top+sheet_motion['extra_travel'])*(1-visibility))), rounded(tile.size, trans.get('radius', sheet_motion['radius']), True))
         return result
 
     def frame(self, t):
@@ -240,5 +278,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('storyboard', type=Path)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--format', choices=FORMATS)
+    parser.add_argument('--background', help='Palette name or hex color')
+    parser.add_argument('--background-image', type=Path)
+    parser.add_argument('--logo', choices=['on','off'])
+    parser.add_argument('--logo-color', help='Logo color for a photo background')
+    parser.add_argument('--base-surfaces', type=Path)
     args = parser.parse_args()
-    Movie(args.storyboard.resolve()).render(args.output.resolve())
+    overrides = {k:v for k,v in vars(args).items() if k not in ('storyboard','output') and v is not None}
+    for key in ('background_image','base_surfaces'):
+        if key in overrides: overrides[key] = str(overrides[key].resolve())
+    if 'logo' in overrides: overrides['logo'] = overrides['logo'] == 'on'
+    Movie(args.storyboard.resolve(), overrides).render(args.output.resolve())

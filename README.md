@@ -31,12 +31,27 @@ The generated example uses deliberately simple placeholder screens to demonstrat
 
 ## Defaults and limits
 
-- 1080×1080, 60 fps, silent H.264 MP4.
-- Solid #9FE870, fixed phone, subtle 24 px entrance/exit, logo at both ends.
-- 190 ms tap feedback; .52 s page transitions; .65/.60 s modal transitions.
+- Choice of 1:1 (1080×1080), 16:9 (1920×1080), or 9:16 (1080×1920), at 60 fps.
+- Ten paired Wise colours or an uploaded photo background; centred phone with subtle 24 px entrance/exit.
+- Optional Wise logo; automatically uses the partner colour for solid backgrounds.
+- 190 ms tap feedback; page and sheet motion extracted from base-surfaces (live checkout or bundled source snapshot).
 - Configurable screenshots, holds, crops, PNG/GIF/video overlays and chroma key.
 - Typing, animated keypads and zooms require a project-local renderer adaptation; the skill explains how to preserve the established style.
 
 See [SKILL.md](.agents/skills/wise-product-video/SKILL.md) for the workflow and [storyboard format](.agents/skills/wise-product-video/references/storyboard.md) for the JSON schema. All paths are relative to each storyboard; bundled assets use an `@` prefix. Dependencies include a bundled FFmpeg executable through imageio-ffmpeg.
 
 Brand assets are provided for the team's Wise work. This repository does not grant a public license to Wise branding. Keep project inputs and rendered videos out of commits unless intentionally sharing them.
+
+## Choose video options
+
+Codex will ask for format, background and logo visibility before a new video. Example:
+
+> Use $wise-product-video with these screens. Make it 9:16, with a Bright Blue background and the Wise logo on. Read page animations from my local base-surfaces checkout.
+
+Colour pairs (either direction): Bright Green #9FE870 / Forest Green #163300; Bright Blue #A0E1E1 / Dark Charcoal #21231D; Bright Yellow #FFEB69 / Dark Gold #3A341C; Bright Orange #FFC091 / Dark Purple #260A2F; Bright Pink #FFD7EF / Dark Maroon #320707. Photos are cover-cropped; logo colour is configurable for readability.
+
+```sh
+.venv/bin/python .agents/skills/wise-product-video/scripts/render.py examples/generated/storyboard.json --output output/wide.mp4 --format 16:9 --background "Bright Blue" --logo on --base-surfaces /path/to/base-surfaces
+```
+
+Omit `--base-surfaces` to use the bundled snapshot; it is source-derived but not automatically refreshed from GitHub. See [motion sourcing](.agents/skills/wise-product-video/references/motion.md) for mappings and screenshot-rendering limits.

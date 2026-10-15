@@ -13,17 +13,17 @@ See the runnable repository example in `examples/`. A minimal project:
   },
   "scenes": [
     {"screen":"home", "hold":2, "taps":[{"at":1.88,"box":[16,756,374,804]}]},
-    {"screen":"review", "transition":{"type":"push","duration":0.52}, "hold":2}
+    {"screen":"review", "transition":{"type":"push"}, "hold":2}
   ]
 }
 ```
 
 ## Canvas and screens
 
-- `canvas`: `[1080,1080]`, even dimensions required; `fps`: 60.
-- `phone`: `[345,118,390,844]`; `radius`: 40.
-- `background`: hex color. Optional `background_image` fills the canvas and stays still.
-- `logo`: `@wise-logo.png`; set null to disable. `logo_size`: `[240,230]` maximum fit.
+- `format`: `"1:1"`, `"16:9"`, or `"9:16"`. Resolves to 1080×1080, 1920×1080 or 1080×1920. Overrides legacy `canvas`. `fps`:60.
+- `phone`: defaults to a centred 390×844 rectangle for each format; `radius`: 40.
+- `background`: palette name (case insensitive) or hex. Optional `background_image` takes precedence, applies EXIF orientation and cover-crops without distortion. `background_position: [0.5,0.5]` controls the focal crop (0–1).
+- `logo`: true/false (legacy asset paths and null supported). The alpha silhouette is tinted with the palette partner, in both directions. For photos `logo_color` overrides automatic Bright Green/Forest Green selection; visually check contrast. `logo_size`: `[240,230]` maximum fit.
 - `intro`: .8 seconds (logo then subtle phone entrance); `outro`: 1.5 seconds (phone exit then logo hold). Set to 0 to disable. At least .8 seconds each is recommended for a clean loop.
 - `screens`: map of names to `file`, optional `crop`, `flatten_radius` (42), `top_fill`, `bottom_fill`. Each is resized to phone dimensions. For clean rectangular screen exports, set `flatten_radius: 0`. For photographed rounded frames, sample-fill corners to remove the old backdrop; override colors for gradients or unusual chrome.
 
@@ -34,13 +34,14 @@ Total duration = intro + sum of incoming transitions + holds + outro. First scen
 `transition.type`:
 
 - `cut`: instant, zero duration.
-- `push`: incoming full page from right, outgoing parallax.
+- `push`: incoming full page from right, outgoing parallax and opacity from base-surfaces.
+- `pop`: reverse navigation using the same source profile.
 - `rise`: incoming full page from bottom.
 - `fade`: full-page crossfade.
 - `modal-in`: incoming screen's sheet rises over dimmed outgoing page.
 - `modal-out`: outgoing sheet drops to reveal incoming page.
 
-`duration` defaults to .52; explicitly use .65/.60 for modal in/out. Modal options: `top:54`, `radius:32`, `dim:0.25`. The top status-bar strip in the modal screenshot is excluded from the sheet. Use `fade` of .28 seconds to switch currency options within a modal. The current/next image includes its overlays during transitions, keeping success animation synchronized.
+`duration` defaults to the source profile: page .42; modal .42 + .04 delay. Modal motion includes the sampled spring overshoot. Modal options: `top:54`, `radius:32`, `dim:0.4`; backdrop uses its separate .3 second ease transition. Explicit duration overrides scale the source motion timing. The top status-bar strip in the modal screenshot is excluded from the sheet. For an editorial approximation, use `fade` of .28 seconds to switch currency options within a modal. The current/next image includes its overlays during transitions, keeping success animation synchronized.
 
 `taps`: list of `{ "at": seconds, "box": [l,t,r,b] }` with built-in 190 ms press feedback.
 
@@ -65,3 +66,9 @@ For the supplied success clip, sample its background pixel to configure the key 
 ## Beyond the schema
 
 Typing, moving keypads, zooms, individual controls and complex pre-modal dim phases require a project-local Python adaptation. Preserve supplied assets and established motion curves, then validate the new states and transition midpoints. Do not approximate these with full-screen cuts without telling the user.
+
+## Source profile and command-line choices
+
+`base_surfaces`: path to a local checkout, relative to this storyboard or absolute. Reads supported selectors from the current working files at render time. `motion_profile`: path to an extracted JSON snapshot; ignored when `base_surfaces` is set. Otherwise uses the bundled snapshot. See [motion sourcing](motion.md).
+
+CLI overrides: `--format 16:9 --background "Bright Pink" --logo on`, or `--background-image photo.jpg --logo off`. CLI paths are resolved from the working directory; JSON paths remain relative to the storyboard. `--base-surfaces /path/to/base-surfaces` selects live extraction.

@@ -24,10 +24,10 @@ for name, title, button, color in [
     im.save(root/f'{name}.png')
 scenes = [
     {'screen':'home','hold':1,'taps':[{'at':.88,'box':[16,756,374,804]}]},
-    {'screen':'review','transition':{'type':'push','duration':.52},'hold':1},
-    {'screen':'methods','transition':{'type':'modal-in','duration':.65},'hold':1},
-    {'screen':'review','transition':{'type':'modal-out','duration':.60},'hold':1,'taps':[{'at':1.48,'box':[16,756,374,804]}]},
-    {'screen':'success','transition':{'type':'fade','duration':.44},'hold':1.5,
+    {'screen':'review','transition':{'type':'push'},'hold':1},
+    {'screen':'methods','transition':{'type':'modal-in'},'hold':1},
+    {'screen':'review','transition':{'type':'modal-out'},'hold':1,'taps':[{'at':1.48,'box':[16,756,374,804]}]},
+    {'screen':'success','transition':{'type':'fade'},'hold':1.5,
      'overlays':[{'file':'@loader.gif','box':[160,350,70,70]}]},
 ]
 config = {'screens':{name:{'file':f'{name}.png','flatten_radius':0} for name in ('home','review','methods','success')},'scenes':scenes}

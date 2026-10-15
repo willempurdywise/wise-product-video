@@ -40,6 +40,37 @@ class RendererTest(unittest.TestCase):
         self.assertGreater(len(frames), 60)
         self.assertFalse(np.array_equal(frames[0], frames[60]))
 
+    def test_formats_and_centering(self):
+        for fmt, size in module.FORMATS.items():
+            m = module.Movie(ROOT/'examples/generated/storyboard.json', {'format':fmt})
+            self.assertEqual(m.size, size)
+            self.assertEqual((m.x,m.y), ((size[0]-390)//2,(size[1]-844)//2))
+
+    def test_all_ten_colour_pairs(self):
+        for name, color in module.COLORS.items():
+            m = module.Movie(ROOT/'examples/generated/storyboard.json', {'background':name})
+            expected = module.Image.new('RGB',(1,1),module.PARTNERS[color]).getpixel((0,0))
+            pixels = np.array(m.logo)
+            self.assertTrue(np.all(pixels[:,:,:3][pixels[:,:,3] == 255] == expected))
+
+    def test_logo_disabled(self):
+        m = module.Movie(ROOT/'examples/generated/storyboard.json', {'logo':False})
+        self.assertIsNone(m.logo)
+        self.assertTrue(np.all(np.array(m.frame(0)) == [159,232,112]))
+
+    def test_photo_cover_without_stretch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            photo = Path(tmp)/'photo.png'
+            im = module.Image.new('RGB',(200,100),'red')
+            module.ImageDraw.Draw(im).rectangle((50,0,149,99),fill='blue')
+            im.save(photo)
+            m = module.Movie(ROOT/'examples/generated/storyboard.json', {'background_image':str(photo),'logo':False})
+            self.assertTrue(np.all(np.array(m.base)[100:-100,100:-100] == [0,0,255]))
+
+    def test_source_spring_overshoots(self):
+        self.assertGreater(max(p[1] for p in self.movie.motion['sheet']['points']), 1)
+        self.assertAlmostEqual(self.movie.scenes[2]['_transition'], .46)
+
     def test_bad_transition_fails_before_render(self):
         config = module.json.loads((ROOT/'examples/generated/storyboard.json').read_text())
         for screen in config['screens'].values():
