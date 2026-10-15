@@ -288,7 +288,12 @@ class Movie:
             im.paste(self.logo, ((self.size[0]-self.logo.width)//2, (self.size[1]-self.logo.height)//2), self.logo)
         enter = motion((t-.1)/max(.01, self.intro-.15)) if self.intro else 1
         leave = motion((t-self.intro-self.content_duration)/min(.70, max(.01, self.outro))) if self.outro else 0
-        opacity = enter*(1-leave)
+        fade_duration = self.cfg.get('phone_fade_duration', .45)
+        if fade_duration <= 0:
+            raise ValueError('phone_fade_duration must be positive.')
+        fade_in = motion((t-.1)/min(fade_duration, max(.01, self.intro-.15))) if self.intro else 1
+        fade_out = motion((t-self.intro-self.content_duration)/min(fade_duration, max(.01, self.outro))) if self.outro else 0
+        opacity = fade_in*(1-fade_out)
         if opacity > 0:
             offset = round(24*(1-enter)+24*leave)
             im.paste(self.phone(max(0, min(self.content_duration-1/self.fps, t-self.intro))), (self.x, self.y+offset), self.mask.point(lambda v: round(v*opacity)))

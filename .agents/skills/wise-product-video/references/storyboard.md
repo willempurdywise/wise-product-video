@@ -24,6 +24,7 @@ See the runnable repository example in `examples/`. A minimal project:
 - `phone`: defaults to a centred 390×844 rectangle for each format; `radius`: 40.
 - `background`: palette name (case insensitive) or hex. Optional `background_image` takes precedence, applies EXIF orientation and cover-crops without distortion. `background_position: [0.5,0.5]` controls the focal crop (0–1).
 - `logo`: true/false (legacy asset paths and null supported). The alpha silhouette is tinted with the palette partner, in both directions. For photos `logo_color` overrides automatic Bright Green/Forest Green selection; visually check contrast. `logo_size`: `[240,230]` maximum fit.
+- `phone_fade_duration`: .45 seconds for both the phone fade-in and fade-out, independent of the position movement and overall intro/outro holds. Must be positive; shortened automatically to fit shorter intros/outros.
 - `intro`: .8 seconds (logo then subtle phone entrance); `outro`: 1.5 seconds (phone exit then logo hold). Set to 0 to disable. At least .8 seconds each is recommended for a clean loop.
 - `screens`: map of names to `file`, optional `crop`, `flatten_radius` (42), `top_fill`, `bottom_fill`. Each is resized to phone dimensions. For clean rectangular screen exports, set `flatten_radius: 0`. For photographed rounded frames, sample-fill corners to remove the old backdrop; override colors for gradients or unusual chrome.
 

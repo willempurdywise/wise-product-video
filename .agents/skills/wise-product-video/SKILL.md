@@ -71,7 +71,7 @@ When the checkout is unavailable, use the bundled source-derived profile and dis
 
 - Selected canvas and background, 60 fps, silent H.264/yuv420p.
 - A stationary 390×844 phone centred in the selected canvas, 40 px rounded corners; adapt to supplied composition.
-- When enabled, centred paired-colour Wise logo at start/end. Phone fades in while rising 24 px, then fades out while moving down 24 px. Match the first/last frame for a seamless loop.
+- When enabled, centred paired-colour Wise logo at start/end. Phone fades in over 450 ms while rising 24 px, then fades out over 450 ms while moving down 24 px. Opacity timing is independent of the slower position movement; retain the existing intro/outro holds. Match the first/last frame for a seamless loop.
 - Page movement: cubic-bezier(.32,.72,0,1), 420 ms from the source profile. Full header and page travel together. Outgoing horizontal page moves at .30 of incoming travel, fading to .5 opacity.
 - Payment and full-screen modals: 500 ms cubic-bezier(.32,.72,0,1), no overshoot or delay, matching `.fs-sheet` in base-surfaces. Use `preset: "spring_sheet"` only for the generic inset BottomSheet component (420 ms spring plus 40 ms delay). Both use a 40% backdrop over 300 ms. Top edge is configured to match the supplied screen. Explicit timing overrides remain available.
 - Tap feedback: 190 ms control-shaped dark green press; response begins around 120 ms after press starts. No expanding touch rings unless requested.
