@@ -55,3 +55,9 @@ Colour pairs (either direction): Bright Green #9FE870 / Forest Green #163300; Br
 ```
 
 Omit `--base-surfaces` to use the bundled snapshot; it is source-derived but not automatically refreshed from GitHub. See [motion sourcing](.agents/skills/wise-product-video/references/motion.md) for mappings and screenshot-rendering limits.
+
+## Modal motion and scrolling
+
+Payment/full-screen modals use base-surfaces' smooth 500 ms curve with no bounce. The generic inset BottomSheet spring is an explicit opt-in (`preset: "spring_sheet"`), not the default.
+
+Scrolling uses smaller eased movements separated by pauses. Supply a tall content export; Codex configures the scroll viewport so headers and bottom controls remain fixed. The storyboard records swipe distances, durations and pauses for later refinement.

@@ -20,6 +20,20 @@
     "radius": 12.0
   },
   "sheet": {
+    "duration": 0.5,
+    "delay": 0,
+    "bezier": [
+      0.32,
+      0.72,
+      0.0,
+      1.0
+    ],
+    "extra_travel": 0,
+    "radius": 40.0,
+    "dim": 0.4,
+    "dim_duration": 0.3
+  },
+  "spring_sheet": {
     "duration": 0.42,
     "delay": 0.04,
     "points": [

@@ -33,3 +33,13 @@ scenes = [
 config = {'screens':{name:{'file':f'{name}.png','flatten_radius':0} for name in ('home','review','methods','success')},'scenes':scenes}
 (root/'storyboard.json').write_text(json.dumps(config,indent=2)+'\n')
 print(root/'storyboard.json')
+
+# A separate scrolling example keeps sticky chrome outside the content viewport.
+content = Image.new('RGB',(390,1500),'white')
+d = ImageDraw.Draw(content)
+for i in range(15):
+    d.rectangle((0,i*100,389,i*100+99),fill=('#eeeeee' if i%2 else 'white'))
+    d.text((25,i*100+35),f'Transaction {i+1}',fill='#163300',font_size=24)
+content.save(root/'long-content.png')
+config['scenes'] = [{'screen':'home','hold':5,'scroll':{'file':'long-content.png','viewport':[0,100,390,620],'steps':[{'at':1,'duration':.45,'to':180},{'at':2.1,'duration':.55,'to':410},{'at':3.4,'duration':.4,'to':550}]}}]
+(root/'scroll-storyboard.json').write_text(json.dumps(config,indent=2)+'\n')

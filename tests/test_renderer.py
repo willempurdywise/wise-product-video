@@ -68,8 +68,19 @@ class RendererTest(unittest.TestCase):
             self.assertTrue(np.all(np.array(m.base)[100:-100,100:-100] == [0,0,255]))
 
     def test_source_spring_overshoots(self):
-        self.assertGreater(max(p[1] for p in self.movie.motion['sheet']['points']), 1)
-        self.assertAlmostEqual(self.movie.scenes[2]['_transition'], .46)
+        self.assertGreater(max(p[1] for p in self.movie.motion['spring_sheet']['points']), 1)
+        self.assertAlmostEqual(self.movie.scenes[2]['_transition'], .5)
+        self.assertNotIn('points', self.movie.motion['sheet'])
+
+    def test_scroll_pauses_and_easing(self):
+        scroll = {'steps':[{'at':1,'duration':.5,'to':180}, {'at':2,'duration':.5,'to':400}]}
+        self.assertEqual(module.Movie.scroll_offset(scroll,.9), 0)
+        self.assertEqual(module.Movie.scroll_offset(scroll,1.6), 180)
+        self.assertEqual(module.Movie.scroll_offset(scroll,1.9), 180)
+        self.assertEqual(module.Movie.scroll_offset(scroll,3), 400)
+        early = module.Movie.scroll_offset(scroll,1.05)
+        middle = module.Movie.scroll_offset(scroll,1.25)-module.Movie.scroll_offset(scroll,1.20)
+        self.assertLess(early, middle)
 
     def test_bad_transition_fails_before_render(self):
         config = module.json.loads((ROOT/'examples/generated/storyboard.json').read_text())

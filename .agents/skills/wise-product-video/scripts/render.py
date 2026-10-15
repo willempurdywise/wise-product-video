@@ -99,6 +99,7 @@ class Movie:
         self.starts, self.lengths = [], []
         elapsed = 0
         self.media = {}
+        self.scroll_images = {}
         for i, scene in enumerate(self.scenes):
             if scene['screen'] not in self.screens:
                 raise ValueError('Unknown screen: ' + scene['screen'])
@@ -106,7 +107,11 @@ class Movie:
             kind = trans.get('type', 'cut')
             if kind not in ('cut', 'push', 'pop', 'rise', 'fade', 'modal-in', 'modal-out'):
                 raise ValueError('Unknown transition: ' + kind)
-            default_duration = self.motion['sheet']['duration']+self.motion['sheet']['delay'] if kind.startswith('modal-') else self.motion['page']['duration']
+            preset = trans.get('preset', 'sheet')
+            if preset not in ('sheet', 'spring_sheet'):
+                raise ValueError('Unknown modal preset: ' + preset)
+            sheet_profile = self.motion[preset]
+            default_duration = sheet_profile['duration']+sheet_profile['delay'] if kind.startswith('modal-') else self.motion['page']['duration']
             duration = trans.get('duration', default_duration) if i and kind != 'cut' else 0
             hold = scene.get('hold', 2.)
             if duration < 0 or hold <= 0:
@@ -115,6 +120,24 @@ class Movie:
             self.starts.append(elapsed)
             self.lengths.append(duration + hold)
             elapsed += duration + hold
+            if 'scroll' in scene:
+                scroll = scene['scroll']
+                x,y,w,h = scroll['viewport']
+                if min(x,y) < 0 or min(w,h) <= 0 or x+w > self.w or y+h > self.h:
+                    raise ValueError('Scroll viewport must fit inside the phone.')
+                content = Image.open(self.path(scroll['file'])).convert('RGB')
+                content = content.resize((w, round(content.height*w/content.width)), RESAMPLE)
+                limit = content.height-h
+                if limit < 0 or not 0 <= scroll.get('initial',0) <= limit:
+                    raise ValueError('Scroll content must fill viewport; initial offset must be in bounds.')
+                end = 0
+                for step in scroll['steps']:
+                    if step['at'] < end or step['duration'] <= 0 or not 0 <= step['to'] <= limit:
+                        raise ValueError('Scroll steps must be ordered, non-overlapping and in bounds.')
+                    end = step['at']+step['duration']
+                if end > duration+hold:
+                    raise ValueError('Scroll steps must finish before the scene ends.')
+                self.scroll_images[i] = content
             for overlay in scene.get('overlays', []):
                 self.load_media(overlay)
         self.intro = c.get('intro', .8)
@@ -153,9 +176,27 @@ class Movie:
             raise ValueError(f'No frames decoded: {file}')
         self.media[key] = frames, ends
 
+    @staticmethod
+    def scroll_offset(scroll, t):
+        offset = scroll.get('initial', 0)
+        for step in scroll['steps']:
+            if t < step['at']:
+                return offset
+            if t < step['at']+step['duration']:
+                u = (t-step['at'])/step['duration']
+                eased = u*u*(3-2*u)
+                return offset+(step['to']-offset)*eased
+            offset = step['to']
+        return offset
+
     def scene_image(self, index, t):
         scene = self.scenes[index]
         im = self.screens[scene['screen']].copy()
+        if 'scroll' in scene:
+            scroll = scene['scroll']
+            x,y,w,h = scroll['viewport']
+            offset = round(self.scroll_offset(scroll,t))
+            im.paste(self.scroll_images[index].crop((0,offset,w,offset+h)), (x,y))
         for patch in scene.get('patches', []):
             ImageDraw.Draw(im).rectangle(patch['box'], fill=patch['fill'])
         for spec in scene.get('overlays', []):
@@ -217,10 +258,10 @@ class Movie:
             return result
         # The screenshot's dimmed status bar stays out of the moving sheet crop.
         entering = kind == 'modal-in'
-        sheet_motion = self.motion['sheet']
+        sheet_motion = self.motion[trans.get('preset', 'sheet')]
         scale = duration/(sheet_motion['duration']+sheet_motion['delay'])
         progress = max(0, min(1, (local-sheet_motion['delay']*scale)/(sheet_motion['duration']*scale)))
-        spring = float(np.interp(progress, *zip(*sheet_motion['points'])))
+        spring = motion(progress, sheet_motion['bezier']) if 'bezier' in sheet_motion else float(np.interp(progress, *zip(*sheet_motion['points'])))
         visibility = spring if entering else 1-spring
         dim_progress = motion(local/(sheet_motion['dim_duration']*scale), (.25,.1,.25,1))
         dim_visibility = dim_progress if entering else 1-dim_progress

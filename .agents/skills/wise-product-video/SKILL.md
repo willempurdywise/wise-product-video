@@ -46,7 +46,7 @@ When the checkout is unavailable, use the bundled source-derived profile and dis
 - A stationary 390×844 phone centred in the selected canvas, 40 px rounded corners; adapt to supplied composition.
 - When enabled, centred paired-colour Wise logo at start/end. Phone fades in while rising 24 px, then fades out while moving down 24 px. Match the first/last frame for a seamless loop.
 - Page movement: cubic-bezier(.32,.72,0,1), 420 ms from the source profile. Full header and page travel together. Outgoing horizontal page moves at .30 of incoming travel, fading to .5 opacity.
-- Bottom sheets: source-sampled 420 ms spring with 40 ms delay, 40% backdrop over 300 ms. Top edge is configured to match the supplied screen. Explicit timing overrides remain available.
+- Payment and full-screen modals: 500 ms cubic-bezier(.32,.72,0,1), no overshoot or delay, matching `.fs-sheet` in base-surfaces. Use `preset: "spring_sheet"` only for the generic inset BottomSheet component (420 ms spring plus 40 ms delay). Both use a 40% backdrop over 300 ms. Top edge is configured to match the supplied screen. Explicit timing overrides remain available.
 - Tap feedback: 190 ms control-shaped dark green press; response begins around 120 ms after press starts. No expanding touch rings unless requested.
 - Readable holds around 1–2 seconds, longer where content demands it. Do not force every storyboard into 20 seconds.
 - Start success animation with its transition, not after it. Use the bundled celebration video if appropriate, and remove the screenshot's static checkmark underneath it.
@@ -61,3 +61,9 @@ Use supplied transparent keyboard overlays when available. Do not cover nearby f
 Preserve GIF alpha and frame durations. Use actual supplied camera footage when provided. Crop/scale media into its intended viewport; do not replace scanner chrome. Bundled assets are referenced as `@wise-logo.png`, `@loader.gif`, and `@celebration-forest-green.mp4`.
 
 Inspect intro, outro, taps, each modal midpoint, and horizontal navigation midpoints. Confirm text remains readable and nothing outside the phone moves unintentionally. For looping output, compare first and last frames.
+
+## Scroll like a person
+
+When a scene needs scrolling, use several short eased swipes with reading pauses, not a single constant-speed movement. Start with roughly 120–260 px per swipe, .35–.65 seconds of movement, and .4–.9 seconds of pause; vary deliberately to suit the content. These are video choreography defaults, not base-surfaces motion tokens. Stop on meaningful content and hold before tapping. Keep status bars, sticky headers and bottom controls fixed by scrolling only the content viewport.
+
+Use a tall content export and the scene `scroll` field described in the storyboard schema. Do not stretch a single viewport screenshot to invent unseen content. If missing, request a full-height export or additional screens. Preserve existing scrolling choices unless the user requests a change.

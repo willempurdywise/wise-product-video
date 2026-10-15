@@ -33,9 +33,15 @@ def extract(root):
     bd,bu=re.search(r'background ([\d.]+)(ms|s) ease',backdrop).groups()
     dim=float(re.search(r'rgba\(0, 0, 0, ([\d.]+)\)',block('.wise-bottom-sheet__backdrop--visible'))[1])
     commit=subprocess.run(['git','-C',str(root),'rev-parse','HEAD'],capture_output=True,text=True,check=True).stdout.strip()
-    return {'source':{'repository':'https://github.com/transferwise/base-surfaces','commit':commit,'file':SOURCE,'sha256':hashlib.sha256(css.encode()).hexdigest()},
+    result = {'source':{'repository':'https://github.com/transferwise/base-surfaces','commit':commit,'file':SOURCE,'sha256':hashlib.sha256(css.encode()).hexdigest()},
       'page':{'duration':seconds(duration,unit),'bezier':[float(v) for v in bezier.split(',')], 'parallax':abs(float(re.search(r'translateX\((-?[\d.]+)%\)',old)[1]))/100,'old_opacity':float(re.search(r'opacity: ([\d.]+)',old)[1]),'new_opacity':float(re.search(r'opacity: ([\d.]+)',new)[1]),'opacity_duration':seconds(opacity_duration,opacity_unit),'radius':float(re.search(r'border-top-left-radius: ([\d.]+)px',new)[1])},
       'sheet':{'duration':seconds(sd,su),'delay':seconds(delay,du),'points':points,'extra_travel':float(re.search(r'100% \+ ([\d.]+)px',sheet)[1]),'radius':float(re.search(r'border-radius: ([\d.]+)px',sheet)[1]),'dim':dim,'dim_duration':seconds(bd,bu)}}
+
+    full = block('.fs-sheet')
+    fd, fu, curve = re.search(r'transform ([\d.]+)(ms|s) cubic-bezier\(([^)]+)\)', full).groups()
+    result['spring_sheet'] = result['sheet']
+    result['sheet'] = {'duration':seconds(fd,fu), 'delay':0, 'bezier':[float(v) for v in curve.split(',')], 'extra_travel':0, 'radius':float(re.search(r'border-radius: ([\d.]+)px',full)[1]), 'dim':dim, 'dim_duration':seconds(bd,bu)}
+    return result
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)

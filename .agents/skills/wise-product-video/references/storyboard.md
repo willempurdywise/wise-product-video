@@ -41,7 +41,7 @@ Total duration = intro + sum of incoming transitions + holds + outro. First scen
 - `modal-in`: incoming screen's sheet rises over dimmed outgoing page.
 - `modal-out`: outgoing sheet drops to reveal incoming page.
 
-`duration` defaults to the source profile: page .42; modal .42 + .04 delay. Modal motion includes the sampled spring overshoot. Modal options: `top:54`, `radius:32`, `dim:0.4`; backdrop uses its separate .3 second ease transition. Explicit duration overrides scale the source motion timing. The top status-bar strip in the modal screenshot is excluded from the sheet. For an editorial approximation, use `fade` of .28 seconds to switch currency options within a modal. The current/next image includes its overlays during transitions, keeping success animation synchronized.
+`duration` defaults to the source profile: page .42; modal .5 with cubic-bezier(.32,.72,0,1) and no bounce. Set `preset:"spring_sheet"` explicitly only for the generic inset BottomSheet (.42 + .04 delay, with overshoot). Modal options: `top:54`, `radius:40`, `dim:0.4`; backdrop uses its separate .3 second ease transition. Explicit duration overrides scale the source motion timing. The top status-bar strip in the modal screenshot is excluded from the sheet. For an editorial approximation, use `fade` of .28 seconds to switch currency options within a modal. The current/next image includes its overlays during transitions, keeping success animation synchronized.
 
 `taps`: list of `{ "at": seconds, "box": [l,t,r,b] }` with built-in 190 ms press feedback.
 
@@ -72,3 +72,21 @@ Typing, moving keypads, zooms, individual controls and complex pre-modal dim pha
 `base_surfaces`: path to a local checkout, relative to this storyboard or absolute. Reads supported selectors from the current working files at render time. `motion_profile`: path to an extracted JSON snapshot; ignored when `base_surfaces` is set. Otherwise uses the bundled snapshot. See [motion sourcing](motion.md).
 
 CLI overrides: `--format 16:9 --background "Bright Pink" --logo on`, or `--background-image photo.jpg --logo off`. CLI paths are resolved from the working directory; JSON paths remain relative to the storyboard. `--base-surfaces /path/to/base-surfaces` selects live extraction.
+
+## Incremental scrolling
+
+Add `scroll` to a scene. `file` is a tall content-only export, scaled proportionally to viewport width. `viewport` is `[x,y,width,height]` within the phone. Chrome outside it stays fixed. Offsets are pixels in the scaled content; positive offsets scroll down. `initial` defaults to 0. Each step moves to an absolute offset with smooth acceleration/deceleration; gaps between steps hold the position exactly. Times are scene-local (including incoming transition). Steps must be ordered, non-overlapping, in bounds, and finish within the scene.
+
+```json
+"scroll": {
+  "file": "screens/long-content.png",
+  "viewport": [0,100,390,620],
+  "steps": [
+    {"at":1.0,"duration":0.45,"to":180},
+    {"at":2.1,"duration":0.55,"to":410},
+    {"at":3.4,"duration":0.4,"to":550}
+  ]
+}
+```
+
+Use a scene hold long enough to include these steps and a final reading pause. Patches, media overlays and taps are painted after the scrolling content and remain viewport-fixed. Use them for fixed chrome or feedback, not scrolling content.
