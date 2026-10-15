@@ -10,7 +10,7 @@ A reusable Codex skill for creating Wise-style product demo videos from screensh
 
    > Use $wise-product-video to create a video with these screens
 
-Codex first shows selectable questions for format, background type and logo visibility. Choosing a solid background opens a selectable list of all ten colours. It also asks about target duration or automatic pacing. Native question-tool support is required for clickable choices; on hosts without it, Codex explains the limitation and asks for typed answers. After those choices, it asks for your storyboard, with a plain-language example to help you describe the actions. It reuses anything you have already supplied.
+Codex first asks you to upload your storyboard (or describe the actions in chat), with a plain-language example as a hint. After receiving it, Codex shows selectable questions for format, background type and logo visibility. Choosing a solid background opens a selectable list of all ten colours. It also asks about target duration or automatic pacing. Native question-tool support is required for clickable choices; on hosts without it, Codex explains the limitation and asks for typed answers. It reuses anything you have already supplied.
 
 The skill lives at `.agents/skills/wise-product-video/` so it is available within this repository. To use it in another project, copy that whole folder into the project's `.agents/skills/`, or ask Codex's skill installer to install it from this repository. Team members need access to this private repository first. If the skill does not appear, restart Codex.
 

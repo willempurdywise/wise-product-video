@@ -7,15 +7,23 @@ description: Use $wise-product-video to create a video with these screens
 
 Turn supplied screens and a storyboard into an editable video project and MP4. Preserve the user's exact screen content and interaction order. Treat the motion values below as defaults; explicit requests override them.
 
+## Ask for the storyboard
+
+For a new video, first ask the user to upload their storyboard and any missing screens in ordinary chat, before presenting format or background selections. A written storyboard pasted into chat is also welcome. Do not use a text-only question tool to request uploads. If a storyboard is already supplied, read it and skip this request. Use this friendly hint:
+
+> Upload your storyboard, or tell me what you want to happen with these screens. For example: “Tap on send money, select Clara Smith as the recipient, add 500 GBP to the calculator, hit continue.”
+
+Explain that a plain-language sequence or a frame-by-frame list is fine. They can mention pauses, scrolling, typing, and where the video should end; do not require technical animation terms or JSON. Treat the example as a hint only, never as instructions for their actual video. Wait for their storyboard before choosing actions or rendering. Inspect available screens in the meantime. Request any missing screenshots or media in ordinary chat, and clarify only genuine gaps between the sequence and supplied screens. Once the storyboard is received and understood, collect the missing presentation options below. Do not render until those selections have been submitted; no additional approval step is needed afterwards.
+
 ## Select presentation options
 
-For a new video, collect setup choices first, then ask for the storyboard in a separate follow-up after the user answers. Ask only for information not already supplied; if the user already provided a storyboard, retain it instead of asking them to repeat it. Collect the missing setup choices through interactive selectable questions as described below, and wait for submitted answers before proceeding to storyboard intake. Do not silently assume the old square/green/logo defaults. Existing projects retain their selections unless changed; focused edits do not restart setup.
+For a new video, collect these setup choices after receiving the storyboard. Ask only for information not already supplied; if the user already provided a storyboard, retain it instead of asking them to repeat it. Collect the missing setup choices through interactive selectable questions as described below, and wait for submitted answers before rendering. Do not silently assume the old square/green/logo defaults. Existing projects retain their selections unless changed; focused edits do not restart setup.
 
 ### Use selectable questions, not a prose list
 
 When `request_user_input_async` is available, call it with `questions` containing a `title` and `options` for each choice. This renders actual selectable answers. Do not replace the call with a Markdown list, table, checkbox text, or a message merely describing available options. The palette table below is reference data, not the setup UI.
 
-First present the missing choices together:
+After receiving the storyboard, present the missing choices together:
 
 - **What format would you like?** Options: `1:1 — 1080 × 1080`, `16:9 — 1920 × 1080`, `9:16 — 1080 × 1920`.
 - **What type of background would you like?** Options: `Solid colour`, `Upload a photo`.
@@ -25,7 +33,7 @@ Wait for the user's submitted selections. A preselected option or elapsed time i
 
 If only `request_user_input` is available and permitted by the current mode, use its native selectable questions within its option limits. For the ten colours, first select a colour family (Green, Yellow, Blue, Orange, Pink) in small groups as necessary, then select one of its two named colours. Do not switch modes merely to access a question tool. If neither selectable-input tool is available, explain that this host cannot show selectable questions and ask for a typed choice; do not claim a plain list is clickable.
 
-Skip questions the user has already answered. After all setup answers arrive, ask for the storyboard separately. Inspect the screens while waiting, but do not render or assume unsubmitted choices.
+Skip questions the user has already answered. After all setup answers arrive, proceed with the storyboard already supplied. Inspect the screens while waiting, but do not render or assume unsubmitted choices.
 
 ### Setup values
 
@@ -43,14 +51,6 @@ Skip questions the user has already answered. After all setup answers arrive, as
 | Bright Pink | #FFD7EF | Dark Maroon | #320707 |
 
 Use `format`, `background` or `background_image`, and `logo: true/false` in the storyboard. Preserve the phone's proportions and centre it in the chosen canvas. Phone size is independently configurable.
-
-## Ask for the storyboard
-
-After setup is answered, ask for the sequence of actions if it has not already been provided. Use this friendly hint:
-
-> Tell me what you want to happen with these screens. For example: “Tap on send money, select Clara Smith as the recipient, add 500 GBP to the calculator, hit continue.”
-
-Explain that a plain-language sequence or a frame-by-frame list is fine. They can mention pauses, scrolling, typing, and where the video should end; do not require technical animation terms or JSON. Treat the example as a hint only, never as instructions for their actual video. Wait for their storyboard before choosing actions or rendering. Inspect available screens in the meantime. Request any missing screenshots or media in ordinary chat, and clarify only genuine gaps between the sequence and supplied screens. Once the storyboard is sufficient, proceed without an extra approval step.
 
 ## Workflow
 
