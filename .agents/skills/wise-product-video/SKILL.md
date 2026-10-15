@@ -9,7 +9,25 @@ Turn supplied screens and a storyboard into an editable video project and MP4. P
 
 ## Select presentation options
 
-For a new video, collect setup choices first, then ask for the storyboard in a separate follow-up after the user answers. Ask only for information not already supplied; if the user already provided a storyboard, retain it instead of asking them to repeat it. Present the missing setup options together and wait for answers before proceeding to storyboard intake. Do not silently assume the old square/green/logo defaults. Existing projects retain their selections unless changed; focused edits do not restart setup.
+For a new video, collect setup choices first, then ask for the storyboard in a separate follow-up after the user answers. Ask only for information not already supplied; if the user already provided a storyboard, retain it instead of asking them to repeat it. Collect the missing setup choices through interactive selectable questions as described below, and wait for submitted answers before proceeding to storyboard intake. Do not silently assume the old square/green/logo defaults. Existing projects retain their selections unless changed; focused edits do not restart setup.
+
+### Use selectable questions, not a prose list
+
+When `request_user_input_async` is available, call it with `questions` containing a `title` and `options` for each choice. This renders actual selectable answers. Do not replace the call with a Markdown list, table, checkbox text, or a message merely describing available options. The palette table below is reference data, not the setup UI.
+
+First present the missing choices together:
+
+- **What format would you like?** Options: `1:1 — 1080 × 1080`, `16:9 — 1920 × 1080`, `9:16 — 1080 × 1920`.
+- **What type of background would you like?** Options: `Solid colour`, `Upload a photo`.
+- **Show the Wise logo?** Options: `On`, `Off`.
+
+Wait for the user's submitted selections. A preselected option or elapsed time is not an answer. For solid colour, present a second selectable question, **Which background colour would you like?**, with all ten options: `Bright Green — #9FE870`, `Forest Green — #163300`, `Bright Yellow — #FFEB69`, `Dark Gold — #3A341C`, `Bright Blue — #A0E1E1`, `Dark Charcoal — #21231D`, `Bright Orange — #FFC091`, `Dark Purple — #260A2F`, `Bright Pink — #FFD7EF`, `Dark Maroon — #320707`. Also collect timing with **How should the video be paced?** Options: `Choose readable pacing`, `I have a target duration`. If they choose a target, request the duration in seconds. If they choose a photo, request the upload in ordinary chat; the question tool accepts text only.
+
+If only `request_user_input` is available and permitted by the current mode, use its native selectable questions within its option limits. For the ten colours, first select a colour family (Green, Yellow, Blue, Orange, Pink) in small groups as necessary, then select one of its two named colours. Do not switch modes merely to access a question tool. If neither selectable-input tool is available, explain that this host cannot show selectable questions and ask for a typed choice; do not claim a plain list is clickable.
+
+Skip questions the user has already answered. After all setup answers arrive, ask for the storyboard separately. Inspect the screens while waiting, but do not render or assume unsubmitted choices.
+
+### Setup values
 
 - Format: **1:1 (1080×1080)**, **16:9 (1920×1080)** or **9:16 (1080×1920)**.
 - Background: a colour from the table below or an uploaded photo. If choosing a photo, request the file in ordinary chat. Fit it with a centred cover crop without stretching; adjust its focal position if needed.
