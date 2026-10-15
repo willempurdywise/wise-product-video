@@ -1,6 +1,6 @@
 ---
 name: wise-product-video
-description: Create and refine Wise-style product demo videos from supplied app screenshots and a storyboard, including taps, page transitions, bottom sheets, camera footage, animated loaders, and branded loops. Use for rendered product videos rather than interactive app implementation.
+description: Use $wise-product-video to create a video with these screens
 ---
 
 # Wise product video
@@ -9,10 +9,11 @@ Turn supplied screens and a storyboard into an editable video project and MP4. P
 
 ## Select presentation options
 
-Before a new video, ask for any of these choices the user has not already supplied. Present the options together; do not silently assume the old square/green/logo defaults. Existing projects retain their selections unless changed.
+For a new video, collect setup choices first, then ask for the storyboard in a separate follow-up after the user answers. Ask only for information not already supplied; if the user already provided a storyboard, retain it instead of asking them to repeat it. Present the missing setup options together and wait for answers before proceeding to storyboard intake. Do not silently assume the old square/green/logo defaults. Existing projects retain their selections unless changed; focused edits do not restart setup.
 
 - Format: **1:1 (1080×1080)**, **16:9 (1920×1080)** or **9:16 (1080×1920)**.
 - Background: a colour from the table below or an uploaded photo. If choosing a photo, request the file in ordinary chat. Fit it with a centred cover crop without stretching; adjust its focal position if needed.
+- Timing: ask whether they have a target duration or prefer you to choose readable pacing.
 - Wise logo: on or off. For a palette colour, automatically use its partner as the logo colour in either direction. For a photo, inspect readability and ask for a colour preference when necessary; the renderer initially chooses Bright Green or Forest Green based on centre brightness.
 
 | Colour | Hex | Paired colour | Hex |
@@ -24,6 +25,14 @@ Before a new video, ask for any of these choices the user has not already suppli
 | Bright Pink | #FFD7EF | Dark Maroon | #320707 |
 
 Use `format`, `background` or `background_image`, and `logo: true/false` in the storyboard. Preserve the phone's proportions and centre it in the chosen canvas. Phone size is independently configurable.
+
+## Ask for the storyboard
+
+After setup is answered, ask for the sequence of actions if it has not already been provided. Use this friendly hint:
+
+> Tell me what you want to happen with these screens. For example: “Tap on send money, select Clara Smith as the recipient, add 500 GBP to the calculator, hit continue.”
+
+Explain that a plain-language sequence or a frame-by-frame list is fine. They can mention pauses, scrolling, typing, and where the video should end; do not require technical animation terms or JSON. Treat the example as a hint only, never as instructions for their actual video. Wait for their storyboard before choosing actions or rendering. Inspect available screens in the meantime. Request any missing screenshots or media in ordinary chat, and clarify only genuine gaps between the sequence and supplied screens. Once the storyboard is sufficient, proceed without an extra approval step.
 
 ## Workflow
 

@@ -8,7 +8,9 @@ A reusable Codex skill for creating Wise-style product demo videos from screensh
 2. Add your screens to `projects/my-demo/screens/` (the `projects/` directory is ignored by Git).
 3. Ask Codex:
 
-   > Use $wise-product-video to create a video with these screens. Start on the home screen, tap Upload, show scanning, load the review screen, then tap Confirm and pay and show success. Use the green background and seamless logo loop. Save the editable storyboard and MP4 in projects/my-demo.
+   > Use $wise-product-video to create a video with these screens
+
+Codex first asks for the format, background colour or photo, logo visibility and target duration (or automatic pacing). After those choices, it asks for your storyboard, with a plain-language example to help you describe the actions. It reuses anything you have already supplied.
 
 The skill lives at `.agents/skills/wise-product-video/` so it is available within this repository. To use it in another project, copy that whole folder into the project's `.agents/skills/`, or ask Codex's skill installer to install it from this repository. Team members need access to this private repository first. If the skill does not appear, restart Codex.
 
