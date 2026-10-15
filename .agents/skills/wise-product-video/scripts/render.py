@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Render screenshot storyboards. All project asset paths are relative to the JSON file."""
+import argparse
+import bisect
+import json
+import math
+from pathlib import Path
+import subprocess
+
+import imageio_ffmpeg
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageSequence
+
+ASSETS = Path(__file__).resolve().parents[1] / 'assets'
+RESAMPLE = Image.Resampling.LANCZOS
+
+
+def motion(x):
+    x = max(0, min(1, x))
+    if x in (0, 1):
+        return x
+    lo, hi = 0., 1.
+    for _ in range(18):
+        u = (lo + hi) / 2
+        if 3 * (1-u)**2 * u * .32 + u**3 < x:
+            lo = u
+        else:
+            hi = u
+    u = (lo + hi) / 2
+    return 3*(1-u)**2*u*.72 + 3*(1-u)*u*u + u**3
+
+
+def rounded(size, radius, top_only=False):
+    w, h = size
+    mask = Image.new('L', (w*3, h*3))
+    d = ImageDraw.Draw(mask)
+    d.rounded_rectangle((0, 0, w*3-1, h*3-1), radius=radius*3, fill=255)
+    if top_only:
+        d.rectangle((0, min(h, radius)*3, w*3, h*3), fill=255)
+    return mask.resize(size, RESAMPLE)
+
+
+class Movie:
+    def __init__(self, config):
+        self.root = config.parent
+        self.cfg = json.loads(config.read_text())
+        c = self.cfg
+        self.size = tuple(c.get('canvas', [1080, 1080]))
+        self.fps = c.get('fps', 60)
+        self.x, self.y, self.w, self.h = c.get('phone', [345, 118, 390, 844])
+        if self.fps <= 0 or min(*self.size, self.w, self.h) <= 0 or any(v % 2 for v in self.size):
+            raise ValueError('Use positive dimensions/fps and even canvas dimensions for H.264.')
+        self.mask = rounded((self.w, self.h), c.get('radius', 40))
+        self.base = Image.new('RGB', self.size, c.get('background', '#9FE870'))
+        if c.get('background_image'):
+            self.base = Image.open(self.path(c['background_image'])).convert('RGB').resize(self.size, RESAMPLE)
+        self.logo = None
+        if c.get('logo', '@wise-logo.png'):
+            self.logo = Image.open(self.path(c.get('logo', '@wise-logo.png'))).convert('RGBA')
+            self.logo.thumbnail(tuple(c.get('logo_size', [240, 230])), RESAMPLE)
+        self.screens = {}
+        for name, spec in c['screens'].items():
+            im = Image.open(self.path(spec['file'])).convert('RGB')
+            if 'crop' in spec:
+                im = im.crop(tuple(spec['crop']))
+            im = im.resize((self.w, self.h), RESAMPLE)
+            # Photograph corners must never travel inside the phone as background slivers.
+            r = spec.get('flatten_radius', 42)
+            if r:
+                outside = rounded(im.size, r).point(lambda v: 255 if v < 255 else 0)
+                fill = Image.new('RGB', im.size, spec.get('top_fill', im.getpixel((self.w//2, 8))))
+                ImageDraw.Draw(fill).rectangle((0, self.h//2, self.w, self.h), fill=spec.get('bottom_fill', im.getpixel((self.w//2, self.h-5))))
+                im.paste(fill, (0, 0), outside)
+            self.screens[name] = im
+        self.scenes = c['scenes']
+        if not self.scenes:
+            raise ValueError('At least one scene is required.')
+        self.starts, self.lengths = [], []
+        elapsed = 0
+        self.media = {}
+        for i, scene in enumerate(self.scenes):
+            if scene['screen'] not in self.screens:
+                raise ValueError('Unknown screen: ' + scene['screen'])
+            trans = scene.get('transition', {})
+            kind = trans.get('type', 'cut')
+            if kind not in ('cut', 'push', 'rise', 'fade', 'modal-in', 'modal-out'):
+                raise ValueError('Unknown transition: ' + kind)
+            duration = trans.get('duration', .52) if i and kind != 'cut' else 0
+            hold = scene.get('hold', 2.)
+            if duration < 0 or hold <= 0:
+                raise ValueError('Transition duration must be nonnegative; hold must be positive.')
+            scene['_transition'] = duration
+            self.starts.append(elapsed)
+            self.lengths.append(duration + hold)
+            elapsed += duration + hold
+            for overlay in scene.get('overlays', []):
+                self.load_media(overlay)
+        self.intro = c.get('intro', .8)
+        self.outro = c.get('outro', 1.5)
+        if min(self.intro, self.outro) < 0:
+            raise ValueError('Intro/outro must be nonnegative.')
+        self.content_duration = elapsed
+        self.duration = self.intro + elapsed + self.outro
+
+    def path(self, value):
+        return ASSETS / value[1:] if value.startswith('@') else self.root / value
+
+    def load_media(self, spec):
+        key = json.dumps(spec, sort_keys=True)
+        if key in self.media:
+            return
+        file = self.path(spec['file'])
+        _, _, w, h = spec['box']
+        frames, ends = [], []
+        if file.suffix.lower() in ('.mp4', '.mov', '.webm'):
+            # Normalize frame rate and decode only the requested segment into memory.
+            fps = spec.get('fps', 30)
+            seconds = spec.get('max_duration', 10)
+            result = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), '-v', 'error', '-ss', str(spec.get('trim_start', 0)), '-i', str(file), '-t', str(seconds), '-vf', f'scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps}', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True)
+            for n, pixels in enumerate(np.frombuffer(result.stdout, np.uint8).reshape(-1, h, w, 3)):
+                frames.append(Image.fromarray(pixels).convert('RGBA'))
+                ends.append((n+1)/fps)
+        else:
+            with Image.open(file) as im:
+                elapsed = 0
+                for frame in ImageSequence.Iterator(im):
+                    frames.append(frame.convert('RGBA').resize((w, h), RESAMPLE))
+                    elapsed += max(.01, frame.info.get('duration', 100)/1000)
+                    ends.append(elapsed)
+        if not frames:
+            raise ValueError(f'No frames decoded: {file}')
+        self.media[key] = frames, ends
+
+    def scene_image(self, index, t):
+        scene = self.scenes[index]
+        im = self.screens[scene['screen']].copy()
+        for patch in scene.get('patches', []):
+            ImageDraw.Draw(im).rectangle(patch['box'], fill=patch['fill'])
+        for spec in scene.get('overlays', []):
+            dt = t - spec.get('start', 0)
+            if dt < 0 or ('end' in spec and t >= spec['end']):
+                continue
+            frames, ends = self.media[json.dumps(spec, sort_keys=True)]
+            dt = dt * spec.get('speed', 1)
+            if spec.get('loop', True):
+                dt %= ends[-1]
+            tile = frames[min(len(frames)-1, bisect.bisect_right(ends, dt))].copy()
+            if 'chroma_key' in spec:
+                pixels = np.array(tile)
+                distance = np.linalg.norm(pixels[:, :, :3].astype(float)-np.array(spec['chroma_key']), axis=2)
+                pixels[:, :, 3] = np.uint8(pixels[:, :, 3] * np.clip((distance-spec.get('key_threshold', 10))/spec.get('key_softness', 24), 0, 1))
+                tile = Image.fromarray(pixels)
+            if spec.get('blur'):
+                tile = tile.filter(ImageFilter.GaussianBlur(spec['blur']))
+            im.paste(tile, tuple(spec['box'][:2]), tile)
+        for event in scene.get('taps', []):
+            p = (t-event['at'])/.19
+            if 0 <= p <= 1:
+                layer = Image.new('RGBA', (self.w*2, self.h*2))
+                ImageDraw.Draw(layer).rounded_rectangle(tuple(round(v*2) for v in event['box']), radius=18, fill=(22, 51, 0, round(42*math.sin(math.pi*p))))
+                im = Image.alpha_composite(im.convert('RGBA'), layer.resize(im.size, RESAMPLE)).convert('RGB')
+        return im
+
+    def phone(self, t):
+        i = min(len(self.scenes)-1, max(0, bisect.bisect_right(self.starts, t)-1))
+        local = t-self.starts[i]
+        scene = self.scenes[i]
+        duration = scene['_transition']
+        new = self.scene_image(i, local)
+        if not duration or local >= duration:
+            return new
+        old = self.scene_image(i-1, self.lengths[i-1]+local)
+        p = motion(local/duration)
+        trans = scene['transition']
+        kind = trans['type']
+        if kind == 'fade':
+            return Image.blend(old, new, p)
+        if kind in ('push', 'rise'):
+            result = old.copy()
+            if kind == 'push':
+                result.paste(old, (-round(self.w*.28*p), 0))
+                result.paste(new, (round(self.w*(1-p)), 0))
+            else:
+                result.paste(new, (0, round(self.h*(1-p))))
+            return result
+        # The screenshot's dimmed status bar stays out of the moving sheet crop.
+        entering = kind == 'modal-in'
+        visibility = p if entering else 1-p
+        under, sheet = (old, new) if entering else (new, old)
+        result = Image.blend(under, Image.new('RGB', under.size, 'black'), trans.get('dim', .25)*visibility)
+        top = trans.get('top', 54)
+        tile = sheet.crop((0, top, self.w, self.h))
+        result.paste(tile, (0, top+round((self.h-top)*(1-visibility))), rounded(tile.size, trans.get('radius', 32), True))
+        return result
+
+    def frame(self, t):
+        im = self.base.copy()
+        if self.logo:
+            im.paste(self.logo, ((self.size[0]-self.logo.width)//2, (self.size[1]-self.logo.height)//2), self.logo)
+        enter = motion((t-.1)/max(.01, self.intro-.15)) if self.intro else 1
+        leave = motion((t-self.intro-self.content_duration)/min(.70, max(.01, self.outro))) if self.outro else 0
+        opacity = enter*(1-leave)
+        if opacity > 0:
+            offset = round(24*(1-enter)+24*leave)
+            im.paste(self.phone(max(0, min(self.content_duration-1/self.fps, t-self.intro))), (self.x, self.y+offset), self.mask.point(lambda v: round(v*opacity)))
+        return im
+
+    def render(self, output):
+        output.parent.mkdir(parents=True, exist_ok=True)
+        ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+        with output.with_suffix('.encode.log').open('w') as log:
+            p = subprocess.Popen([ffmpeg, '-y', '-v', 'warning', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{self.size[0]}x{self.size[1]}', '-r', str(self.fps), '-i', '-', '-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', str(output)], stdin=subprocess.PIPE, stderr=log)
+            try:
+                for n in range(math.ceil(self.fps*self.duration)):
+                    p.stdin.write(self.frame(n/self.fps).tobytes())
+            finally:
+                p.stdin.close()
+                code = p.wait()
+            if code:
+                raise RuntimeError(f'Encoding failed; see {output.with_suffix(".encode.log")}')
+        subprocess.run([ffmpeg, '-v', 'error', '-xerror', '-i', str(output), '-f', 'null', '-'], check=True)
+        times = [0, self.duration-1/self.fps]
+        for start, length, scene in zip(self.starts, self.lengths, self.scenes):
+            times.append(self.intro+start+length/2)
+            if scene['_transition']:
+                times.append(self.intro+start+scene['_transition']/2)
+        times.sort()
+        thumb_w = 270
+        thumb_h = round(thumb_w*self.size[1]/self.size[0])
+        contact = Image.new('RGB', (thumb_w*4, thumb_h*math.ceil(len(times)/4)), '#dddddd')
+        for n, t in enumerate(times):
+            tile = self.frame(t).resize((thumb_w, thumb_h), RESAMPLE)
+            ImageDraw.Draw(tile).text((8, 8), f'{t:.2f}s', fill='black', stroke_width=1, stroke_fill='white')
+            contact.paste(tile, (n%4*thumb_w, n//4*thumb_h))
+        contact.save(output.with_suffix('.contact.jpg'))
+        print(f'{output}\n{math.ceil(self.fps*self.duration)} frames, {self.fps} fps; full decode passed')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('storyboard', type=Path)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    Movie(args.storyboard.resolve()).render(args.output.resolve())

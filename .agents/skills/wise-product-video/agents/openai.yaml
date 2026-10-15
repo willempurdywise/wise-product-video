@@ -1,0 +1,4 @@
+interface:
+  display_name: "Wise Product Video"
+  short_description: "Render Wise product demos from screens and storyboards"
+  default_prompt: "Use $wise-product-video to create a video from my screens and storyboard using the standard Wise motion style."
