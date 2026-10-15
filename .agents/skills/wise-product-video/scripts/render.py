@@ -51,11 +51,21 @@ class Movie:
         self.cfg = json.loads(config.read_text())
         c = self.cfg
         c.update(overrides or {})
-        if c.get('base_surfaces'):
-            from sync_motion import extract
-            self.motion = extract(self.path(c['base_surfaces']))
+        bundled = ASSETS.parent/'vendor/base-surfaces'
+        source = self.path(c['base_surfaces']) if c.get('base_surfaces') else None
+        if source is None and not c.get('motion_profile') and (bundled/'base-surfaces-mobile').is_dir():
+            source = bundled
+        if source is not None:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('wise_sync_motion', Path(__file__).with_name('sync_motion.py'))
+            extractor = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(extractor)
+            self.motion = extractor.extract(source)
+            self.motion_origin = f'base-surfaces checkout: {source}'
         else:
-            self.motion = json.loads((self.path(c['motion_profile']) if c.get('motion_profile') else ASSETS/'motion.json').read_text())
+            profile = self.path(c['motion_profile']) if c.get('motion_profile') else ASSETS/'motion.json'
+            self.motion = json.loads(profile.read_text())
+            self.motion_origin = f'explicit profile: {profile}' if c.get('motion_profile') else 'bundled snapshot (base-surfaces submodule is not initialized)'
         self.size = FORMATS[c['format']] if 'format' in c else tuple(c.get('canvas', [1080, 1080]))
         self.fps = c.get('fps', 60)
         self.x, self.y, self.w, self.h = c.get('phone', [(self.size[0]-390)//2, (self.size[1]-844)//2, 390, 844])
@@ -286,6 +296,9 @@ class Movie:
 
     def render(self, output):
         output.parent.mkdir(parents=True, exist_ok=True)
+        provenance = {'origin':self.motion_origin, 'motion':self.motion}
+        output.with_suffix('.motion.json').write_text(json.dumps(provenance,indent=2)+'\n')
+        print(f"Motion source: {self.motion_origin}; commit {self.motion['source']['commit']}", flush=True)
         ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
         with output.with_suffix('.encode.log').open('w') as log:
             p = subprocess.Popen([ffmpeg, '-y', '-v', 'warning', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{self.size[0]}x{self.size[1]}', '-r', str(self.fps), '-i', '-', '-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', str(output)], stdin=subprocess.PIPE, stderr=log)

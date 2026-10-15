@@ -4,7 +4,13 @@ A reusable Codex skill for creating Wise-style product demo videos from screensh
 
 ## Test with your own screens
 
-1. Clone this private repository and open the folder as a Codex project.
+1. Clone this private repository with its linked base-surfaces dependency, then open it as a Codex project:
+
+   ```sh
+   git clone --recurse-submodules https://github.com/willempurdywise/wise-product-video.git
+   ```
+
+   For an existing clone, run `git submodule update --init --recursive`. You need access to both private repositories.
 2. Add your screens to `projects/my-demo/screens/` (the `projects/` directory is ignored by Git).
 3. Ask Codex:
 
@@ -56,10 +62,12 @@ Colour pairs (either direction): Bright Green #9FE870 / Forest Green #163300; Br
 .venv/bin/python .agents/skills/wise-product-video/scripts/render.py examples/generated/storyboard.json --output output/wide.mp4 --format 16:9 --background "Bright Blue" --logo on --base-surfaces /path/to/base-surfaces
 ```
 
-Omit `--base-surfaces` to use the bundled snapshot; it is source-derived but not automatically refreshed from GitHub. See [motion sourcing](.agents/skills/wise-product-video/references/motion.md) for mappings and screenshot-rendering limits.
+Omit `--base-surfaces` to read the included base-surfaces submodule automatically. If it is not initialized, the renderer reports that it is using the bundled snapshot instead. Every render records the source commit and CSS hashes in a `.motion.json` file beside the video. The submodule is pinned; it does not automatically update from GitHub. See [motion sourcing](.agents/skills/wise-product-video/references/motion.md) for mappings and screenshot-rendering limits.
 
 ## Modal motion and scrolling
 
 Payment/full-screen modals use base-surfaces' smooth 500 ms curve with no bounce. The generic inset BottomSheet spring is an explicit opt-in (`preset: "spring_sheet"`), not the default.
 
 Scrolling uses smaller eased movements separated by pauses. Supply a tall content export; Codex configures the scroll viewport so headers and bottom controls remain fixed. The storyboard records swipe distances, durations and pauses for later refinement.
+
+If installing just the skill folder through a skill installer, check whether `vendor/base-surfaces` was populated. Some installers omit submodules. A recursive clone is the recommended setup; an explicit local `--base-surfaces` path remains supported.

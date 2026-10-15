@@ -10,7 +10,9 @@ SOURCE = 'base-surfaces-mobile/mobile/src/styles.css'
 
 def extract(root):
     root = Path(root)
-    css = (root/SOURCE).read_text()
+    sources = [SOURCE] if (root/SOURCE).exists() else ['base-surfaces-mobile/mobile/src/components/'+name+'.css' for name in ('PageTransition','BottomSheet','PrototypeSettings')]
+    texts = [(name,(root/name).read_text()) for name in sources]
+    css = '\n'.join(text for _,text in texts)
     def block(selector):
         match = re.search(r'^'+re.escape(selector)+r'\s*\{([^}]+)\}', css, re.M)
         if not match:
@@ -33,7 +35,7 @@ def extract(root):
     bd,bu=re.search(r'background ([\d.]+)(ms|s) ease',backdrop).groups()
     dim=float(re.search(r'rgba\(0, 0, 0, ([\d.]+)\)',block('.wise-bottom-sheet__backdrop--visible'))[1])
     commit=subprocess.run(['git','-C',str(root),'rev-parse','HEAD'],capture_output=True,text=True,check=True).stdout.strip()
-    result = {'source':{'repository':'https://github.com/transferwise/base-surfaces','commit':commit,'file':SOURCE,'sha256':hashlib.sha256(css.encode()).hexdigest()},
+    result = {'source':{'repository':'https://github.com/transferwise/base-surfaces','commit':commit,'files':{name:hashlib.sha256(text.encode()).hexdigest() for name,text in texts}},
       'page':{'duration':seconds(duration,unit),'bezier':[float(v) for v in bezier.split(',')], 'parallax':abs(float(re.search(r'translateX\((-?[\d.]+)%\)',old)[1]))/100,'old_opacity':float(re.search(r'opacity: ([\d.]+)',old)[1]),'new_opacity':float(re.search(r'opacity: ([\d.]+)',new)[1]),'opacity_duration':seconds(opacity_duration,opacity_unit),'radius':float(re.search(r'border-top-left-radius: ([\d.]+)px',new)[1])},
       'sheet':{'duration':seconds(sd,su),'delay':seconds(delay,du),'points':points,'extra_travel':float(re.search(r'100% \+ ([\d.]+)px',sheet)[1]),'radius':float(re.search(r'border-radius: ([\d.]+)px',sheet)[1]),'dim':dim,'dim_duration':seconds(bd,bu)}}
 

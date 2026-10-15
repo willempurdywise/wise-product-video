@@ -69,7 +69,7 @@ Typing, moving keypads, zooms, individual controls and complex pre-modal dim pha
 
 ## Source profile and command-line choices
 
-`base_surfaces`: path to a local checkout, relative to this storyboard or absolute. Reads supported selectors from the current working files at render time. `motion_profile`: path to an extracted JSON snapshot; ignored when `base_surfaces` is set. Otherwise uses the bundled snapshot. See [motion sourcing](motion.md).
+`base_surfaces`: path to a local checkout, relative to this storyboard or absolute. Reads supported selectors from the current working files at render time. `motion_profile`: path to an extracted JSON snapshot; ignored when `base_surfaces` is set. With neither override, reads the included `vendor/base-surfaces` submodule when initialized; otherwise reports and uses the bundled snapshot. See [motion sourcing](motion.md).
 
 CLI overrides: `--format 16:9 --background "Bright Pink" --logo on`, or `--background-image photo.jpg --logo off`. CLI paths are resolved from the working directory; JSON paths remain relative to the storyboard. `--base-surfaces /path/to/base-surfaces` selects live extraction.
 

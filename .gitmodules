@@ -1,0 +1,3 @@
+[submodule ".agents/skills/wise-product-video/vendor/base-surfaces"]
+	path = .agents/skills/wise-product-video/vendor/base-surfaces
+	url = https://github.com/transferwise/base-surfaces.git
