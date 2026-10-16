@@ -94,3 +94,9 @@ Inspect intro, outro, taps, each modal midpoint, and horizontal navigation midpo
 When a scene needs scrolling, use several short eased swipes with reading pauses, not a single constant-speed movement. Start with roughly 120–260 px per swipe, .35–.65 seconds of movement, and .4–.9 seconds of pause; vary deliberately to suit the content. These are video choreography defaults, not base-surfaces motion tokens. Stop on meaningful content and hold before tapping. Keep status bars, sticky headers and bottom controls fixed by scrolling only the content viewport.
 
 Use a tall content export and the scene `scroll` field described in the storyboard schema. Do not stretch a single viewport screenshot to invent unseen content. If missing, request a full-height export or additional screens. Preserve existing scrolling choices unless the user requests a change.
+
+## Modal backdrops without bands
+
+Use one full-phone dim layer over the undimmed underlying page, including its status bar and header. Fade this layer from zero as the modal starts loading; do not dim header strips independently or reveal a pre-darkened screenshot before the sheet arrives. Keep the same composed backdrop throughout the modal hold and reverse the fade on dismissal.
+
+Inspect the exact top edge of the modal's rounded surface in the supplied screenshot and configure `transition.top` to that phone-local coordinate. Do not assume the default 54 px: any grey band between status bar and sheet is baked backdrop, not part of the moving sheet. Exclude all of it, including pixels outside the rounded corners. Use the previous undimmed page underneath. If unavailable, request it rather than darken an already-dimmed frame. Inspect opening, settled hold and closing for bands or sudden brightness changes.

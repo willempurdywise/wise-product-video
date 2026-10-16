@@ -240,6 +240,13 @@ class Movie:
         scene = self.scenes[i]
         duration = scene['_transition']
         new = self.scene_image(i, local)
+        trans = scene.get('transition', {})
+        kind = trans.get('type', 'cut')
+        if i and kind == 'modal-in':
+            # Keep the live backdrop throughout the hold; never swap back to a
+            # screenshot's baked dimming/status bar when the animation finishes.
+            under = self.scene_image(i-1, self.lengths[i-1])
+            return self.modal_frame(under, new, local, duration, trans, True)
         if not duration or local >= duration:
             return new
         old = self.scene_image(i-1, self.lengths[i-1]+local)
@@ -266,16 +273,18 @@ class Movie:
                 layer(new, -self.w*page['parallax']*(1-p), page['old_opacity']+(1-page['old_opacity'])*p)
                 layer(old, self.w*p, 1-(1-page['new_opacity'])*p, page['radius']*p)
             return result
-        # The screenshot's dimmed status bar stays out of the moving sheet crop.
-        entering = kind == 'modal-in'
+        return self.modal_frame(new, old, local, duration, trans, False)
+
+    def modal_frame(self, under, sheet, local, duration, trans, entering):
+        # Apply one full-phone backdrop to the undimmed page. Source pixels
+        # above the actual modal edge never enter the moving layer.
         sheet_motion = self.motion[trans.get('preset', 'sheet')]
-        scale = duration/(sheet_motion['duration']+sheet_motion['delay'])
+        scale = max(duration, .000001)/(sheet_motion['duration']+sheet_motion['delay'])
         progress = max(0, min(1, (local-sheet_motion['delay']*scale)/(sheet_motion['duration']*scale)))
         spring = motion(progress, sheet_motion['bezier']) if 'bezier' in sheet_motion else float(np.interp(progress, *zip(*sheet_motion['points'])))
         visibility = spring if entering else 1-spring
         dim_progress = motion(local/(sheet_motion['dim_duration']*scale), (.25,.1,.25,1))
         dim_visibility = dim_progress if entering else 1-dim_progress
-        under, sheet = (old, new) if entering else (new, old)
         result = Image.blend(under, Image.new('RGB', under.size, 'black'), trans.get('dim', sheet_motion['dim'])*dim_visibility)
         top = trans.get('top', 54)
         tile = sheet.crop((0, top, self.w, self.h))

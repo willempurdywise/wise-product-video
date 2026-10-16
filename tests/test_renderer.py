@@ -82,6 +82,31 @@ class RendererTest(unittest.TestCase):
         middle = module.Movie.scroll_offset(scroll,1.25)-module.Movie.scroll_offset(scroll,1.20)
         self.assertLess(early, middle)
 
+    def test_modal_backdrop_stays_consistent_after_opening(self):
+        m = self.movie
+        start = m.starts[2]
+        # The source modal has a baked #bfbfbf header. Use the preceding page
+        # with 40% dim instead, before and after settling.
+        under = m.scene_image(1, m.lengths[1])
+        expected = module.Image.blend(under, module.Image.new('RGB',under.size,'black'), .4)
+        for elapsed in (.49,.5,.8):
+            self.assertTrue(np.array_equal(np.array(m.phone(start+elapsed))[:40], np.array(expected)[:40]))
+        self.assertTrue(np.array_equal(np.array(m.phone(start))[:40], np.array(under)[:40]))
+
+    def test_modal_backdrop_fades_as_one_layer(self):
+        m = self.movie
+        under = module.Image.new('RGB',(m.w,m.h),'white')
+        sheet = module.Image.new('RGB',(m.w,m.h),'white')
+        # A deliberately deeper edge excludes the screenshot's grey band.
+        module.ImageDraw.Draw(sheet).rectangle((0,0,m.w,119), fill='#bfbfbf')
+        im = m.modal_frame(under,sheet,.1,.5,{'top':120},True)
+        self.assertEqual(im.getpixel((195,20)), im.getpixel((195,100)))
+        self.assertLess(im.getpixel((195,20))[0],255)
+        self.assertGreater(im.getpixel((195,20))[0],153)
+        settled = m.modal_frame(under,sheet,.8,.5,{'top':120},True)
+        self.assertEqual(settled.getpixel((195,100)),(153,153,153))
+        self.assertEqual(settled.getpixel((195,130)),(255,255,255))
+
     def test_bad_transition_fails_before_render(self):
         config = module.json.loads((ROOT/'examples/generated/storyboard.json').read_text())
         for screen in config['screens'].values():
