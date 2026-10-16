@@ -71,7 +71,8 @@ class Movie:
         self.x, self.y, self.w, self.h = c.get('phone', [(self.size[0]-390)//2, (self.size[1]-844)//2, 390, 844])
         if self.fps <= 0 or min(*self.size, self.w, self.h) <= 0 or any(v % 2 for v in self.size):
             raise ValueError('Use positive dimensions/fps and even canvas dimensions for H.264.')
-        self.mask = rounded((self.w, self.h), c.get('radius', 40))
+        # One fixed outer mask keeps all uploaded screens and moving layers consistent.
+        self.mask = rounded((self.w, self.h), 40)
         background = c.get('background', '#9FE870')
         background = COLORS.get(background.lower(), background).upper()
         self.base = Image.new('RGB', self.size, background)

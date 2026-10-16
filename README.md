@@ -71,3 +71,5 @@ Payment/full-screen modals use base-surfaces' smooth 500 ms curve with no bounce
 Scrolling uses smaller eased movements separated by pauses. Supply a tall content export; Codex configures the scroll viewport so headers and bottom controls remain fixed. The storyboard records swipe distances, durations and pauses for later refinement.
 
 If installing just the skill folder through a skill installer, check whether `vendor/base-surfaces` was populated. Some installers omit submodules. A recursive clone is the recommended setup; an explicit local `--base-surfaces` path remains supported.
+
+Uploaded screens are cropped into one shared phone frame with a fixed **40 px outer corner radius**. The mask also clips transitions and media overlays; source uploads and full-canvas backgrounds remain unchanged.

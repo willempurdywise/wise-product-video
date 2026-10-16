@@ -21,7 +21,7 @@ See the runnable repository example in `examples/`. A minimal project:
 ## Canvas and screens
 
 - `format`: `"1:1"`, `"16:9"`, or `"9:16"`. Resolves to 1080×1080, 1920×1080 or 1080×1920. Overrides legacy `canvas`. `fps`:60.
-- `phone`: defaults to a centred 390×844 rectangle for each format; `radius`: 40.
+- `phone`: defaults to a centred 390×844 rectangle for each format; the outer corner radius is fixed at 40 px in output coordinates. Legacy top-level `radius` values are ignored to keep the phone format consistent. Modal `transition.radius` is separate.
 - `background`: palette name (case insensitive) or hex. Optional `background_image` takes precedence, applies EXIF orientation and cover-crops without distortion. `background_position: [0.5,0.5]` controls the focal crop (0–1).
 - `logo`: true/false (legacy asset paths and null supported). The alpha silhouette is tinted with the palette partner, in both directions. For photos `logo_color` overrides automatic Bright Green/Forest Green selection; visually check contrast. `logo_size`: `[240,230]` maximum fit.
 - `phone_fade_duration`: .45 seconds for both the phone fade-in and fade-out, independent of the position movement and overall intro/outro holds. Must be positive; shortened automatically to fit shorter intros/outros.
